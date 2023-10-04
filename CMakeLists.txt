@@ -7,6 +7,13 @@ set(CMAKE_CXX_STANDARD 17)
 add_library(Tnet STATIC
         Tnet/network.cpp
         Tnet/network.h
+        Tnet/tresults.h
+        Tnet/ipversion.h
+        Tnet/Socket.cpp
+        Tnet/Socket.h
+        Tnet/SocketHandle.h
+        Tnet/IPEndPoint.h
+        Tnet/IPEndPoint.cpp
 )
 
 # Link the ws2_32 library
