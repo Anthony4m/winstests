@@ -6,8 +6,8 @@
 #define WINSTESTS_SOCKETOPTIONS_H
 #pragma once
 namespace Tnet {
-    enum SocketOptions {
-        TCP_NODELAY,
-    }
+    enum class SocketOptions {
+        TCP_NoDelay,
+    };
 }
 #endif //WINSTESTS_SOCKETOPTIONS_H
