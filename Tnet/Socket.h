@@ -16,9 +16,16 @@ namespace Tnet{
     public:
         Socket(IPVersion ipversion = IPVersion::IPv4,
                SocketHandle handle = INVALID_SOCKET);
-
         TResults Create();
         TResults Close();
+        TResults Bind(IPEndpoint endPoint);
+        TResults Listen(IPEndpoint endPoint,int backlog=5);
+        TResults Accept(Socket &socket);
+        TResults Connect(IPEndpoint endPoint);
+        TResults Send(void * data, size_t size, int &bytesSent);
+        TResults Recv(void * data, size_t size, int &bytesReceived);
+        TResults SendAll(void * data, size_t size);
+        TResults RecvAll(void * data, size_t size);
         SocketHandle GetHandle();
         IPVersion GetIPversion();
     private:
