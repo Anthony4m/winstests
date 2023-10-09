@@ -10,12 +10,21 @@ int main() {
             // connect to server on 1995
             if (socket.Connect(IPEndpoint("localhost",1996)) == TResults::T_Success){
                 std::cout<<"Socket Successfully Connected" <<std::endl;
-                char buffer[1024];
-                strcpy(buffer,"Hello World from client");
-                auto result = TResults::T_Success;
-                while (result == TResults::T_Success){
-                    result = socket.SendAll(buffer,sizeof(buffer));
-                    std::cout<<"Sending Data.....: "<<buffer<<std::endl;
+                std::string buffer = "Hello from client";
+               while (true){
+                    uint32_t bufferSize = buffer.size();
+                    bufferSize = htonl(bufferSize);
+                    auto result = socket.SendAll(buffer.data(),sizeof(uint32_t));
+                    if (result != TResults::T_Success){
+                        std::cout<<"Socket failed to send" <<std::endl;
+                        break;
+                    }
+                    result = socket.SendAll(buffer.data(),buffer.size());
+                    if (result != TResults::T_Success){
+                        std::cout<<"Socket failed to send" <<std::endl;
+                        break;
+                    }
+                    std::cout<<"Sending Data.....: "<<"["<<bufferSize<<"]"<<buffer<<std::endl;
                     Sleep(500);
                 };
                 std::cout << "Socket failed to send" << std::endl;
