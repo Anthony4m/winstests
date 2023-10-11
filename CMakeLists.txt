@@ -14,6 +14,7 @@ add_library(Tnet STATIC
         Tnet/SocketHandle.h
         Tnet/IPEndPoint.h
         Tnet/IPEndPoint.cpp
+        Tnet/Constants.h
 )
 
 # Link the ws2_32 library
