@@ -15,6 +15,8 @@ add_library(Tnet STATIC
         Tnet/IPEndPoint.h
         Tnet/IPEndPoint.cpp
         Tnet/Constants.h
+        Tnet/Packet.h
+        Tnet/PacketException.h
 )
 
 # Link the ws2_32 library
@@ -26,10 +28,16 @@ target_include_directories(Tnet PUBLIC ${CMAKE_SOURCE_DIR}/Tnet)
 # Create separate executable targets for client and server
 add_executable(client_exe
         client/client.cpp
+        Tnet/Packet.h
+        Tnet/Packet.cpp
+        Tnet/PacketException.h
 )
 
 add_executable(server_exe
         server/server.cpp
+        Tnet/Packet.h
+        Tnet/Packet.cpp
+        Tnet/PacketException.h
 )
 
 # Link the client_exe and server_exe with the Tnet library
