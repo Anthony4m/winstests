@@ -7,7 +7,7 @@
 namespace Tnet{
     enum class TResults{
         T_Success,
-        T_NotYetImplemented
+        T_GenericError
     };
 }
 #endif //WINSTESTS_TRESULTS_H
