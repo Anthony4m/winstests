@@ -9,6 +9,8 @@
 #include "ipversion.h"
 #include "socketOptions.h"
 #include "IPEndPoint.h"
+#include "Constants.h"
+#include "Packet.h"
 #pragma once
 namespace Tnet{
     class Socket
@@ -22,10 +24,12 @@ namespace Tnet{
         TResults Listen(IPEndpoint endPoint,int backlog=5);
         TResults Accept(Socket &socket);
         TResults Connect(IPEndpoint endPoint);
-        TResults Send(void * data, size_t size, int &bytesSent);
-        TResults Recv(void * data, size_t size, int &bytesReceived);
-        TResults SendAll(void * data, size_t size);
-        TResults RecvAll(void * data, size_t size);
+        TResults Send(const void * data, uint32_t size, int &bytesSent);
+        TResults Recv(void * data, uint32_t size, int &bytesReceived);
+        TResults SendAll(const void * data, uint32_t size);
+        TResults RecvAll(void * data, uint32_t size);
+        TResults Send(Packet & packet);
+        TResults Recv(Packet & packet);
         SocketHandle GetHandle();
         IPVersion GetIPversion();
     private:

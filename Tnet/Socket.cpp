@@ -5,6 +5,7 @@
 #include "tresults.h"
 #include "ipversion.h"
 #include "Socket.h"
+#include "Packet.h"
 #include <cassert>
 #include <iostream>
 
@@ -17,16 +18,16 @@ namespace Tnet{
         TResults Socket::Create() {
             assert(ipversion == IPVersion::IPv4);
             if (handle != INVALID_SOCKET){
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             handle = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);//attempt to create socket
             if(handle == INVALID_SOCKET){
                 int error = WSAGetLastError();
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
 
             if (SetSocketOptions(SocketOptions::TCP_NoDelay, TRUE) != TResults::T_Success){
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             return TResults::T_Success;
 
@@ -34,12 +35,12 @@ namespace Tnet{
 
         TResults Socket::Close() {
             if(handle == INVALID_SOCKET){
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             int result = closesocket(handle);
             if (result != 0){
                 int error = WSAGetLastError();
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             handle = INVALID_SOCKET;
             return TResults::T_Success;
@@ -60,12 +61,12 @@ namespace Tnet{
                 result = setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, (const char *)&value, sizeof(value));
                 break;
             default:
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
         }
 
         if (result != 0){ //error occured
             int error = WSAGetLastError();
-            return TResults::T_NotYetImplemented;
+            return TResults::T_GenericError;
         }
         return TResults::T_Success;
 
@@ -76,19 +77,19 @@ namespace Tnet{
             int result = bind(handle, (sockaddr *)(&addr), sizeof(sockaddr_in));
         if (result != 0){
             int error = WSAGetLastError();
-            return TResults::T_NotYetImplemented;
+            return TResults::T_GenericError;
         }
         return TResults::T_Success;
     }
 
     TResults Socket::Listen(IPEndpoint endPoint, int backlog) {
             if (Bind(endPoint) != TResults::T_Success){
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             int result = listen(handle, backlog);
             if (result != 0){
                 int error = WSAGetLastError();
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             return TResults::T_Success;
     }
@@ -99,7 +100,7 @@ namespace Tnet{
             SocketHandle acceptConnectionHandle = accept(handle, (sockaddr *)&addr, &len);
             if (acceptConnectionHandle == INVALID_SOCKET){
                 int error = WSAGetLastError();
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             IPEndpoint connectionEndPoint((sockaddr*)&addr);
             std::cout << "Connection from " << connectionEndPoint.GetIPAddress() << ":" << connectionEndPoint.GetPort() << std::endl;
@@ -113,33 +114,39 @@ namespace Tnet{
             int result = connect(handle, (sockaddr *)(&addr), sizeof(sockaddr_in));
         if (result != 0){
             int error = WSAGetLastError();
-            return TResults::T_NotYetImplemented;
+            return TResults::T_GenericError;
         }
         return TResults::T_Success;
     }
 
-    TResults Socket::Send(void *data, size_t size, int &bytesSent) {
+    TResults Socket::Send(const void *data, uint32_t size, int &bytesSent) {
             bytesSent = send(handle, (const char *)data, size, 0);
         if (bytesSent == SOCKET_ERROR){
             int error = WSAGetLastError();
-            return TResults::T_NotYetImplemented;
+            return TResults::T_GenericError;
         }
         return TResults::T_Success;
     }
 
-    TResults Socket::Recv(void *data, size_t size, int &bytesReceived) {
-            bytesReceived = recv(handle, (char *)data, size, 0);
-            if (bytesReceived == 0){
-                return TResults::T_NotYetImplemented;
-            }
-        if (bytesReceived == SOCKET_ERROR){
+    TResults Socket::Recv(void * destination, uint32_t numberOfBytes, int & bytesReceived)
+    {
+        bytesReceived = recv(handle, (char*)destination, numberOfBytes, NULL);
+
+        if (bytesReceived == 0) //If connection was gracefully closed
+        {
+            return TResults::T_GenericError;
+        }
+
+        if (bytesReceived == SOCKET_ERROR)
+        {
             int error = WSAGetLastError();
-            return TResults::T_NotYetImplemented;
+            return TResults::T_GenericError;
         }
+
         return TResults::T_Success;
     }
 
-    TResults Socket::SendAll(void *data, size_t size) {
+    TResults Socket::SendAll(const void *data, uint32_t size) {
         int totalBytesSent = 0;
         while (totalBytesSent < size){
             int bytesRemaining = size - totalBytesSent;
@@ -147,25 +154,62 @@ namespace Tnet{
             int bytesSent = send(handle, (const char *)data + totalBytesSent, size - totalBytesSent, 0);
             TResults result = Send(dataRemaining, bytesRemaining, bytesSent);
             if (result != TResults::T_Success){
-                return TResults::T_NotYetImplemented;
+                return TResults::T_GenericError;
             }
             totalBytesSent += bytesSent;
         }
         return TResults::T_Success;
     };
-    TResults Socket::RecvAll(void *data, size_t size) {
+    TResults Socket::RecvAll(void * destination, uint32_t numberOfBytes)
+    {
         int totalBytesReceived = 0;
-        while (totalBytesReceived < size){
-            int bytesRemaining = size - totalBytesReceived;
-            char *dataRemaining = (char *)data + totalBytesReceived;
-            int bytesSent = recv(handle, ( char *)data + totalBytesReceived, size - totalBytesReceived, 0);
-            TResults result = Send(dataRemaining, bytesRemaining, bytesSent);
-            if (result != TResults::T_Success){
-                return TResults::T_NotYetImplemented;
+
+        while (totalBytesReceived < numberOfBytes)
+        {
+            int bytesRemaining = numberOfBytes - totalBytesReceived;
+            int bytesReceived = 0;
+            char * bufferOffset = (char*)destination + totalBytesReceived;
+            TResults result = Recv(bufferOffset, bytesRemaining, bytesReceived);
+            if (result != TResults::T_Success)
+            {
+                return TResults::T_GenericError;
             }
-            totalBytesReceived += bytesSent;
+            totalBytesReceived += bytesReceived;
+        }
+
+        return TResults::T_Success;
+    }
+
+    TResults Socket::Send(Packet &packet) {
+        uint32_t encodedPacketSize = htonl(packet.buffer.size());
+        TResults results = SendAll(&encodedPacketSize, sizeof(uint32_t));
+        if (results != TResults::T_Success){
+            return TResults::T_GenericError;
+        }
+        results = SendAll(packet.buffer.data(), packet.buffer.size());
+        if (results != TResults::T_Success){
+            return TResults::T_GenericError;
         }
         return TResults::T_Success;
-    };
+    }
+
+    TResults Socket::Recv(Packet & packet)
+    {
+        packet.Clear();
+
+        size_t encodedSize = 0;
+        TResults result = RecvAll(&encodedSize, sizeof(uint32_t)); //Recv packet size
+        if (result != TResults::T_Success)
+            return TResults::T_GenericError;
+
+        uint32_t bufferSize = ntohl(encodedSize);
+
+        packet.buffer.resize(bufferSize);
+        result = RecvAll(&packet.buffer[0], packet.buffer.size()); //Recv packet data
+        if (result != TResults::T_Success)
+            return TResults::T_GenericError;
+
+        return TResults::T_Success;
+    }
 
 }
